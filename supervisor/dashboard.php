@@ -88,18 +88,20 @@ $projects = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </span>
         </p>
 
+
         <a href="dashboard.php"
            class="block bg-[#7A002B] hover:bg-[#5F0021] px-4 py-2 rounded-lg mb-3 transition">
             Dashboard
         </a>
-       
-          <a href="../logout.php"
-       class="block bg-[#E30B5C] hover:bg-[#c0094e] text-center px-4 py-2 rounded-lg transition">
-        Logout
-    </a>
+        <a href="notifications.php"
+           class="block bg-[#E30B5C] hover:bg-[#c0094e] px-4 py-2 rounded-lg mb-3 transition">
+            Notifications
+        </a>
+        <a href="../logout.php"
+           class="block bg-[#E30B5C] hover:bg-[#c0094e] text-center px-4 py-2 rounded-lg transition">
+            Logout
+        </a>
     </div>
-
-  
 </div>
 
 <!-- ================= MAIN CONTENT ================= -->
