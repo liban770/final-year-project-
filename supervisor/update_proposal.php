@@ -16,24 +16,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ");
     $stmt->execute([$status, $feedback, $proposal_id]);
 
-    // Get student id for notification
+    // Notify all students in the project group
     $stmt2 = $pdo->prepare("
-        SELECT projects.student_id 
+        SELECT u.id 
         FROM projects
         JOIN proposals ON proposals.project_id = projects.id
+        JOIN users u ON u.group_id = projects.group_id AND u.role = 'student'
         WHERE proposals.id = ?
     ");
     $stmt2->execute([$proposal_id]);
-    $student = $stmt2->fetch(PDO::FETCH_ASSOC);
+    $students = $stmt2->fetchAll(PDO::FETCH_COLUMN);
 
-    if ($student) {
-        $pdo->prepare("
-            INSERT INTO notifications (user_id, message)
-            VALUES (?, ?)
-        ")->execute([
-            $student['student_id'],
-            "Your proposal has been $status by your supervisor."
-        ]);
+    if ($students) {
+        foreach ($students as $studentId) {
+            $pdo->prepare("
+                INSERT INTO notifications (user_id, message)
+                VALUES (?, ?)
+            ")->execute([
+                $studentId,
+                "Your proposal has been $status by your supervisor."
+            ]);
+        }
     }
 
     header("Location: dashboard.php");

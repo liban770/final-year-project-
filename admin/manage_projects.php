@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action'], $_GET['id']))
     $id = intval($_GET['id']);
     $action = $_GET['action'];
 
-    $stmt = $pdo->prepare("SELECT student_id, supervisor_id, title FROM projects WHERE id = ?");
+    $stmt = $pdo->prepare("SELECT group_id, supervisor_id, title FROM projects WHERE id = ?");
     $stmt->execute([$id]);
     $project = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -31,8 +31,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action'], $_GET['id']))
             $pdo->prepare("UPDATE projects SET status = 'approved' WHERE id = ?")
                 ->execute([$id]);
 
-            $pdo->prepare("INSERT INTO notifications (user_id, message) VALUES (?, ?)")
-                ->execute([$project['student_id'], "🎉 Your project '{$project['title']}' has been approved!"]);
+            $studentIdsStmt = $pdo->prepare("SELECT id FROM users WHERE role = 'student' AND group_id = ?");
+            $studentIdsStmt->execute([$project['group_id']]);
+            $studentIds = $studentIdsStmt->fetchAll(PDO::FETCH_COLUMN);
+            foreach ($studentIds as $studentId) {
+                $pdo->prepare("INSERT INTO notifications (user_id, message) VALUES (?, ?)")
+                    ->execute([$studentId, "🎉 Your group project '{$project['title']}' has been approved!"]);
+            }
 
             if (!empty($project['supervisor_id'])) {
                 $pdo->prepare("INSERT INTO notifications (user_id, message) VALUES (?, ?)")
@@ -47,8 +52,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action'], $_GET['id']))
             $pdo->prepare("UPDATE projects SET status = 'rejected' WHERE id = ?")
                 ->execute([$id]);
 
-            $pdo->prepare("INSERT INTO notifications (user_id, message) VALUES (?, ?)")
-                ->execute([$project['student_id'], "❌ Your project '{$project['title']}' has been rejected."]);
+            $studentIdsStmt = $pdo->prepare("SELECT id FROM users WHERE role = 'student' AND group_id = ?");
+            $studentIdsStmt->execute([$project['group_id']]);
+            $studentIds = $studentIdsStmt->fetchAll(PDO::FETCH_COLUMN);
+            foreach ($studentIds as $studentId) {
+                $pdo->prepare("INSERT INTO notifications (user_id, message) VALUES (?, ?)")
+                    ->execute([$studentId, "❌ Your group project '{$project['title']}' has been rejected."]);
+            }
 
             $success = "Project rejected successfully.";
         }
@@ -82,10 +92,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_deadline'])) {
 ==================================*/
 $projects = $pdo->query("
     SELECT projects.*, 
-           s.name AS student_name,
+           pg.group_name,
+           pg.group_code,
            sp.name AS supervisor_name
     FROM projects
-    JOIN users s ON projects.student_id = s.id
+    LEFT JOIN project_groups pg ON projects.group_id = pg.id
     LEFT JOIN users sp ON projects.supervisor_id = sp.id
     ORDER BY projects.id DESC
 ")->fetchAll(PDO::FETCH_ASSOC);
@@ -179,7 +190,7 @@ $projects = $pdo->query("
                 <thead class="bg-primary text-white">
                     <tr>
                         <th class="px-6 py-4 text-left">Title</th>
-                        <th class="px-6 py-4 text-left">Student</th>
+                        <th class="px-6 py-4 text-left">Group</th>
                         <th class="px-6 py-4 text-left">Supervisor</th>
                         <th class="px-6 py-4 text-left">Deadline</th>
                         <th class="px-6 py-4 text-left">Status</th>
@@ -197,7 +208,7 @@ $projects = $pdo->query("
                     </td>
 
                     <td class="px-6 py-4">
-                        <?= htmlspecialchars($project['student_name']); ?>
+                        <?= htmlspecialchars(($project['group_name'] ?? 'N/A') . ' (' . ($project['group_code'] ?? '-') . ')'); ?>
                     </td>
 
                     <td class="px-6 py-4">

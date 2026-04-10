@@ -29,9 +29,9 @@ if (isset($_POST['schedule'])) {
 
 /* Get All Projects */
 $projects = $pdo->query("
-    SELECT projects.id, projects.title, users.name AS student_name
+    SELECT projects.id, projects.title, pg.group_name, pg.group_code
     FROM projects
-    JOIN users ON projects.student_id = users.id
+    LEFT JOIN project_groups pg ON projects.group_id = pg.id
     ORDER BY projects.id DESC
 ")->fetchAll(PDO::FETCH_ASSOC);
 
@@ -127,7 +127,7 @@ $schedules = $pdo->query("
                         <?php foreach ($projects as $project): ?>
                             <option value="<?= $project['id']; ?>">
                                 <?= htmlspecialchars($project['title']); ?>
-                                (<?= htmlspecialchars($project['student_name']); ?>)
+                                (<?= htmlspecialchars(($project['group_name'] ?? 'N/A') . ' - ' . ($project['group_code'] ?? '-')); ?>)
                             </option>
                         <?php endforeach; ?>
                     </select>

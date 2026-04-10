@@ -9,10 +9,10 @@ if ($_SESSION['role'] != 'supervisor') {
 
 /* ================= FETCH CHAPTERS ================= */
 $stmt = $pdo->prepare("
-    SELECT c.*, p.student_id, u.name AS student_name
+    SELECT c.*, pg.group_name, pg.group_code
     FROM chapters c
     JOIN projects p ON c.project_id = p.id
-    JOIN users u ON p.student_id = u.id
+    LEFT JOIN project_groups pg ON p.group_id = pg.id
     WHERE p.supervisor_id = ?
     ORDER BY c.uploaded_at DESC
 ");
@@ -33,19 +33,22 @@ if (isset($_POST['submit_feedback'])) {
     $update->execute([$feedback, $chapter_id]);
 
     $getStudent = $pdo->prepare("
-        SELECT p.student_id 
+        SELECT u.id
         FROM chapters c
         JOIN projects p ON c.project_id = p.id
+        JOIN users u ON u.group_id = p.group_id AND u.role = 'student'
         WHERE c.id = ?
     ");
     $getStudent->execute([$chapter_id]);
-    $student = $getStudent->fetchColumn();
+    $students = $getStudent->fetchAll(PDO::FETCH_COLUMN);
 
     $notify = $pdo->prepare("
         INSERT INTO notifications (user_id, message)
         VALUES (?, ?)
     ");
-    $notify->execute([$student, "Your chapter has been reviewed by supervisor."]);
+    foreach ($students as $student) {
+        $notify->execute([$student, "Your chapter has been reviewed by supervisor."]);
+    }
 
     header("Location: give_feedback.php");
     exit();
@@ -70,7 +73,7 @@ if (isset($_POST['submit_feedback'])) {
 
         <div>
             <h2 class="text-lg font-semibold text-slate-800">
-                <?= htmlspecialchars($chapter['student_name']); ?>
+                <?= htmlspecialchars(($chapter['group_name'] ?? 'N/A') . ' (' . ($chapter['group_code'] ?? '-') . ')'); ?>
             </h2>
             <p class="text-sm text-gray-500">
                 Chapter <?= $chapter['chapter_number']; ?>

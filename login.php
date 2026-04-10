@@ -37,7 +37,7 @@ if (isset($_POST['login'])) {
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Login - UMS</title>
+<title>Login - ThesisTrack</title>
 <script src="https://cdn.tailwindcss.com"></script>
 
 <style>

@@ -15,6 +15,16 @@ $schedule = null;
 $chapters = [];
 $progress = 0;
 $gradeData = null;
+$group = null;
+
+$groupStmt = $pdo->prepare("
+    SELECT u.group_id, pg.group_name, pg.group_code, pg.member_names
+    FROM users u
+    LEFT JOIN project_groups pg ON u.group_id = pg.id
+    WHERE u.id = ?
+");
+$groupStmt->execute([$student_id]);
+$group = $groupStmt->fetch(PDO::FETCH_ASSOC);
 
 /* ================= PROJECT ================= */
 $stmt = $pdo->prepare("
@@ -24,12 +34,15 @@ $stmt = $pdo->prepare("
         p.description,
         p.status,
         p.deadline,
-        u.name AS supervisor_name
+        u.name AS supervisor_name,
+        pg.group_name,
+        pg.group_code
     FROM projects p
     LEFT JOIN users u ON p.supervisor_id = u.id
-    WHERE p.student_id = ?
+    LEFT JOIN project_groups pg ON p.group_id = pg.id
+    WHERE p.group_id = ?
 ");
-$stmt->execute([$student_id]);
+$stmt->execute([$group['group_id'] ?? 0]);
 $project = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if ($project) {
@@ -99,6 +112,21 @@ if ($project) {
                     : '<span class="text-gray-400">Not Assigned</span>'; ?>
             </p>
         </div>
+        <div>
+            <p class="text-sm text-gray-500">Group</p>
+            <p class="text-lg font-medium text-gray-700">
+                <?= htmlspecialchars(($project['group_name'] ?? '-') . ' (' . ($project['group_code'] ?? '-') . ')'); ?>
+            </p>
+        </div>
+        
+        <?php if (!empty($group['member_names'])): ?>
+        <div>
+            <p class="text-sm text-gray-500">Other Partners</p>
+            <p class="text-md font-medium text-gray-700 italic">
+                <?= nl2br(htmlspecialchars($group['member_names'])); ?>
+            </p>
+        </div>
+        <?php endif; ?>
     </div>
 
     <div class="mt-6">
@@ -244,7 +272,7 @@ if ($project) {
         📌 No Project Created
     </h2>
     <p class="text-gray-600 mb-6">
-        You have not created your final year project yet.
+        Your group has not submitted a final year project yet.
     </p>
     <a href="create_project.php"
        class="bg-[#C2185B] text-white px-8 py-3 rounded-xl hover:bg-[#A3154C] transition shadow-md">

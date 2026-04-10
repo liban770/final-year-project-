@@ -105,6 +105,12 @@ $adminName = htmlspecialchars($_SESSION['name'] ?? 'Admin');
             <a href="reports.php" class="block px-4 py-3 rounded-lg hover:bg-primary transition">
                 Reports
             </a>
+            <a href="supervisor_attendance.php" class="block px-4 py-3 rounded-lg hover:bg-primary transition">
+                Supervisor Attendance
+            </a>
+            <a href="supervisor_attendance_report.php" class="block px-4 py-3 rounded-lg hover:bg-primary transition">
+                Attendance Report
+            </a>
 
             <a href="../logout.php"
                class="block px-4 py-3 rounded-lg bg-red-600 hover:bg-red-700 text-center mt-6">

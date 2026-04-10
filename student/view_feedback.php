@@ -13,7 +13,8 @@ $stmt = $pdo->prepare("
     FROM chapters c
     JOIN projects p ON c.project_id = p.id
     JOIN users u ON p.supervisor_id = u.id
-    WHERE p.student_id = ?
+    JOIN users st ON st.id = ?
+    WHERE p.group_id = st.group_id
     ORDER BY c.uploaded_at DESC
 ");
 $stmt->execute([$_SESSION['user_id']]);

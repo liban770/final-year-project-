@@ -33,15 +33,16 @@ if (isset($_POST['submit_feedback'])) {
             ->execute([$chapter_id]);
 
         $studentStmt = $pdo->prepare("
-            SELECT p.student_id
+            SELECT u.id
             FROM chapters c
             JOIN projects p ON c.project_id = p.id
+            JOIN users u ON u.group_id = p.group_id AND u.role = 'student'
             WHERE c.id = ?
         ");
         $studentStmt->execute([$chapter_id]);
-        $student_id = $studentStmt->fetchColumn();
+        $studentIds = $studentStmt->fetchAll(PDO::FETCH_COLUMN);
 
-        if ($student_id) {
+        foreach ($studentIds as $student_id) {
             $pdo->prepare("
                 INSERT INTO notifications (user_id, message, created_at, is_read)
                 VALUES (?, ?, NOW(), 0)
@@ -54,9 +55,9 @@ if (isset($_POST['submit_feedback'])) {
    FETCH PROJECTS
 ========================================= */
 $stmt = $pdo->prepare("
-    SELECT p.*, u.name AS student_name
+    SELECT p.*, pg.group_name, pg.group_code
     FROM projects p
-    JOIN users u ON p.student_id = u.id
+    LEFT JOIN project_groups pg ON p.group_id = pg.id
     WHERE p.supervisor_id = ?
 ");
 $stmt->execute([$supervisor_id]);
@@ -97,6 +98,14 @@ $projects = $stmt->fetchAll(PDO::FETCH_ASSOC);
            class="block bg-[#E30B5C] hover:bg-[#c0094e] px-4 py-2 rounded-lg mb-3 transition">
             Notifications
         </a>
+        <a href="student_attendance.php"
+           class="block bg-[#E30B5C] hover:bg-[#c0094e] px-4 py-2 rounded-lg mb-3 transition">
+            Take Attendance
+        </a>
+        <a href="student_attendance_history.php"
+           class="block bg-[#E30B5C] hover:bg-[#c0094e] px-4 py-2 rounded-lg mb-3 transition">
+            Attendance History
+        </a>
         <a href="../logout.php"
            class="block bg-[#E30B5C] hover:bg-[#c0094e] text-center px-4 py-2 rounded-lg transition">
             Logout
@@ -124,7 +133,7 @@ $projects = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </h2>
 
             <p class="text-sm text-gray-500">
-                Student: <?= htmlspecialchars($project['student_name']) ?>
+                Group: <?= htmlspecialchars(($project['group_name'] ?? 'N/A') . ' (' . ($project['group_code'] ?? '-') . ')') ?>
             </p>
         </div>
 

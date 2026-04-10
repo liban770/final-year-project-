@@ -24,25 +24,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ");
     $stmt->execute([$feedback, $supervisor_id, $chapter_id]);
 
-    // Get student id
+    // Get all students in the group
     $stmt2 = $pdo->prepare("
-        SELECT p.student_id
+        SELECT u.id
         FROM chapters c
         JOIN projects p ON c.project_id = p.id
+        JOIN users u ON u.group_id = p.group_id AND u.role = 'student'
         WHERE c.id = ?
     ");
     $stmt2->execute([$chapter_id]);
-    $student_id = $stmt2->fetchColumn();
+    $student_ids = $stmt2->fetchAll(PDO::FETCH_COLUMN);
 
     // Send notification
     $stmt3 = $pdo->prepare("
         INSERT INTO notifications (user_id, message, is_read, created_at)
         VALUES (?, ?, 0, NOW())
     ");
-    $stmt3->execute([
-        $student_id,
-        "Your chapter has been reviewed. Please check feedback."
-    ]);
+    foreach ($student_ids as $student_id) {
+        $stmt3->execute([
+            $student_id,
+            "Your chapter has been reviewed. Please check feedback."
+        ]);
+    }
 
     header("Location: review_chapters.php");
     exit();

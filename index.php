@@ -17,7 +17,7 @@ if (isset($_SESSION['role'])) {
 <!DOCTYPE html>
 <html>
 <head>
-    <title>UMS Management System</title>
+    <title>ThesisTrack Managment System</title>
     <script src="https://cdn.tailwindcss.com"></script>
 
     <style>
@@ -50,7 +50,7 @@ if (isset($_SESSION['role'])) {
     <div class="text-center max-w-3xl px-6 fade-in">
 
         <h1 class="text-4xl md:text-5xl font-bold mb-6 leading-tight float">
-            Final Year Project <br>
+           ThesisTrack <br>
             <span class="text-[#FDE8EF]">Management System</span>
         </h1>
 

@@ -11,9 +11,9 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
    GET ALL PROJECTS + SUPERVISOR NAME
 ================================ */
 $projects = $pdo->query("
-    SELECT projects.*, users.name AS student_name, sup.name AS supervisor_name
+    SELECT projects.*, pg.group_name, pg.group_code, sup.name AS supervisor_name
     FROM projects
-    JOIN users ON projects.student_id = users.id
+    LEFT JOIN project_groups pg ON projects.group_id = pg.id
     LEFT JOIN users AS sup ON projects.supervisor_id = sup.id
 ")->fetchAll(PDO::FETCH_ASSOC);
 
@@ -111,7 +111,7 @@ if (isset($_POST['assign'])) {
                     <thead class="bg-primary text-white text-left">
                         <tr>
                             <th class="px-6 py-4">Project Title</th>
-                            <th class="px-6 py-4">Student</th>
+                            <th class="px-6 py-4">Group</th>
                             <th class="px-6 py-4">Supervisor</th>
                             <th class="px-6 py-4">Assign</th>
                         </tr>
@@ -129,7 +129,7 @@ if (isset($_POST['assign'])) {
 
                             <!-- Student -->
                             <td class="px-6 py-4">
-                                <?= htmlspecialchars($project['student_name']); ?>
+                                <?= htmlspecialchars(($project['group_name'] ?? 'N/A') . ' (' . ($project['group_code'] ?? '-') . ')'); ?>
                             </td>
 
                             <!-- Supervisor -->

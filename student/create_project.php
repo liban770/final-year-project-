@@ -8,22 +8,84 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'student') {
 }
 
 $message = "";
+$group = null;
+$groupMembers = [];
+
+// Check if student is already in a group
+$studentStmt = $pdo->prepare("
+    SELECT u.id, u.name, u.group_id, pg.group_name, pg.group_code, pg.member_names
+    FROM users u
+    LEFT JOIN project_groups pg ON u.group_id = pg.id
+    WHERE u.id = ?
+");
+$studentStmt->execute([$_SESSION['user_id']]);
+$studentData = $studentStmt->fetch(PDO::FETCH_ASSOC);
+
+if ($studentData && !empty($studentData['group_id'])) {
+    $group = $studentData;
+
+    $membersStmt = $pdo->prepare("
+        SELECT id, name, email
+        FROM users
+        WHERE role = 'student' AND group_id = ?
+        ORDER BY name ASC
+    ");
+    $membersStmt->execute([$group['group_id']]);
+    $groupMembers = $membersStmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+// No dropdown needed anymore, handling explicit string names in the form
 
 if (isset($_POST['create'])) {
-
-    $student_id = $_SESSION['user_id'];
-    $title = trim($_POST['title']);
-    $description = trim($_POST['description']);
-
-    $stmt = $pdo->prepare("
-        INSERT INTO projects (student_id, title, description)
-        VALUES (?, ?, ?)
-    ");
-
-    if ($stmt->execute([$student_id, $title, $description])) {
-        $message = "Project created successfully!";
+    if ($group) {
+        // Validation if already in group
+        $message = "Your group already exists. Only one project per group allowed.";
     } else {
-        $message = "Something went wrong.";
+        $title = trim($_POST['title'] ?? "");
+        $description = trim($_POST['description'] ?? "");
+        $groupName = trim($_POST['group_name'] ?? "");
+        $selectedMembers = $_POST['members'] ?? [];
+
+        if ($title === "" || $description === "" || $groupName === "") {
+            $message = "Project Title, Description, and Group Name are required.";
+        } else {
+            try {
+                $pdo->beginTransaction();
+
+                // 1. Create the Group
+                $groupCode = 'GRP-' . strtoupper(substr(md5(uniqid()), 0, 6));
+                $memberNames = trim($_POST['partner_names'] ?? "");
+
+                $stmtGroup = $pdo->prepare("INSERT INTO project_groups (group_name, group_code, member_names) VALUES (?, ?, ?)");
+                $stmtGroup->execute([$groupName, $groupCode, $memberNames]);
+                $newGroupId = $pdo->lastInsertId();
+
+                // 2. Assign the leader (current student) to group
+                $stmtUser = $pdo->prepare("UPDATE users SET group_id = ? WHERE id = ?");
+                $stmtUser->execute([$newGroupId, $_SESSION['user_id']]);
+
+                // 3. (Optional) We no longer strictly associate other user accounts, since they typed names.
+
+                // 4. Create the Project
+                $stmtProject = $pdo->prepare("
+                    INSERT INTO projects (group_id, student_id, title, description)
+                    VALUES (?, ?, ?, ?)
+                ");
+                $stmtProject->execute([$newGroupId, $_SESSION['user_id'], $title, $description]);
+
+                $pdo->commit();
+                $message = "Group and Project submitted successfully!";
+                
+                // Refresh the page to show the new group
+                header("Location: create_project.php");
+                exit();
+            } catch (PDOException $e) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                $message = "Error submitting project: " . $e->getMessage();
+            }
+        }
     }
 }
 ?>
@@ -66,13 +128,36 @@ Logout
 <div class="flex-1 p-6">
 
 <div class="mb-8">
-<h1 class="text-3xl font-semibold text-[#C2185B]">Create Project</h1>
-<p class="text-gray-500 text-sm">Submit your academic project proposal</p>
+<h1 class="text-3xl font-semibold text-[#C2185B]">Create Group Project</h1>
+<p class="text-gray-500 text-sm">Submit your academic project proposal as a group</p>
 </div>
 
 <?php if ($message): ?>
 <div class="bg-[#C2185B] text-white px-4 py-3 rounded-lg mb-6 shadow">
 <?= htmlspecialchars($message); ?>
+</div>
+<?php endif; ?>
+
+<?php if ($group): ?>
+<div class="bg-white shadow-lg rounded-xl p-6 mb-6 max-w-2xl">
+<h2 class="text-lg font-semibold text-[#C2185B] mb-2">Group Information</h2>
+<p class="text-sm text-gray-600">
+    Group: <span class="font-semibold"><?= htmlspecialchars($group['group_name']); ?></span>
+    (<?= htmlspecialchars($group['group_code']); ?>)
+</p>
+<p class="text-sm text-gray-600 mt-2">Members:</p>
+<ul class="list-disc list-inside text-sm text-gray-700 mt-1">
+    <?php foreach ($groupMembers as $member): ?>
+        <li><?= htmlspecialchars($member['name']); ?> (Registered User)</li>
+    <?php endforeach; ?>
+    <?php if (!empty($group['member_names'])): ?>
+        <li class="mt-2 text-gray-600 italic">Added Partners: <br> <?= nl2br(htmlspecialchars($group['member_names'])); ?></li>
+    <?php endif; ?>
+</ul>
+</div>
+<?php else: ?>
+<div class="bg-blue-100 text-blue-800 px-4 py-3 rounded-lg mb-6 shadow max-w-2xl border-l-4 border-blue-500">
+    You will automatically create a new group upon project submission.
 </div>
 <?php endif; ?>
 
@@ -152,14 +237,28 @@ class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:rin
 </textarea>
 </div>
 
-<!-- Submit -->
+<?php if (!$group): ?>
+<!-- Group Name -->
 <div>
-<button
-type="submit"
-name="create"
-class="bg-[#C2185B] hover:bg-[#A3154C] text-white px-6 py-2 rounded-lg transition">
-Create Project
-</button>
+    <label class="block text-sm font-medium text-gray-600 mb-2">Group Name</label>
+    <input type="text" name="group_name" required placeholder="e.g. Phoenix Team"
+           class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#C2185B] focus:outline-none">
+</div>
+
+<!-- Write Members Names -->
+<div>
+    <label class="block text-sm font-medium text-gray-600 mb-2">Group Members Names</label>
+    <textarea name="partner_names" rows="3" required placeholder="Write all group members here (e.g. John Doe, Sarah Smith, Michael Lee)"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#C2185B] focus:outline-none"></textarea>
+    <p class="text-xs text-gray-500 mt-1">Please enter the full names of all your group partners.</p>
+</div>
+<?php endif; ?>
+
+<!-- Submit -->
+<div class="pt-4">
+    <button type="submit" name="create" class="bg-[#C2185B] hover:bg-[#A3154C] text-white px-6 py-2 rounded-lg transition shadow-md w-full sm:w-auto">
+        <?= $group ? "Submit Project (As " . htmlspecialchars($group['group_name']) . ")" : "Create Group & Submit Project" ?>
+    </button>
 </div>
 
 </form>

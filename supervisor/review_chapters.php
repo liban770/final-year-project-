@@ -12,9 +12,9 @@ include("../includes/header.php");
 $supervisor_id = $_SESSION['user_id'];
 
 $stmt = $pdo->prepare("
-    SELECT p.id, p.title, u.name AS student_name
+    SELECT p.id, p.title, pg.group_name, pg.group_code
     FROM projects p
-    JOIN users u ON p.student_id = u.id
+    LEFT JOIN project_groups pg ON p.group_id = pg.id
     WHERE p.supervisor_id = ?
 ");
 $stmt->execute([$supervisor_id]);
@@ -39,9 +39,9 @@ $projects = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <?= htmlspecialchars($project['title']); ?>
         </h2>
         <p class="text-gray-500 mt-1">
-            👤 Student: 
+            👥 Group:
             <span class="font-medium text-slate-700">
-                <?= htmlspecialchars($project['student_name']); ?>
+                <?= htmlspecialchars(($project['group_name'] ?? 'N/A') . ' (' . ($project['group_code'] ?? '-') . ')'); ?>
             </span>
         </p>
     </div>

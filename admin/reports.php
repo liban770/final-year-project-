@@ -20,6 +20,8 @@ $rejected_projects = $pdo->query("SELECT COUNT(*) FROM projects WHERE status='re
 
 /* ================= DEFENSE ================= */
 $total_defense = $pdo->query("SELECT COUNT(*) FROM defense_schedule")->fetchColumn();
+$student_attendance_count = $pdo->query("SELECT COUNT(*) FROM student_attendance")->fetchColumn();
+$supervisor_attendance_count = $pdo->query("SELECT COUNT(*) FROM supervisor_attendance")->fetchColumn();
 
 ?>
 
@@ -51,6 +53,14 @@ Dashboard
 
 <a href="reports.php" class="block px-3 py-2 rounded bg-[#C2185B] font-semibold">
 Reports
+</a>
+
+<a href="supervisor_attendance.php" class="block px-3 py-2 rounded hover:bg-[#C2185B]">
+Supervisor Attendance
+</a>
+
+<a href="supervisor_attendance_report.php" class="block px-3 py-2 rounded hover:bg-[#C2185B]">
+Attendance Report
 </a>
 
 <a href="download_report.php"
@@ -106,6 +116,20 @@ Academic overview of students, supervisors and final year projects.
 <p class="text-gray-500">Defense Scheduled</p>
 <h2 class="text-4xl font-bold text-purple-600 mt-2">
 <?= $total_defense ?>
+</h2>
+</div>
+
+<div class="bg-white rounded-xl shadow p-6 text-center">
+<p class="text-gray-500">Student Attendance Rows</p>
+<h2 class="text-4xl font-bold text-[#C2185B] mt-2">
+<?= $student_attendance_count ?>
+</h2>
+</div>
+
+<div class="bg-white rounded-xl shadow p-6 text-center">
+<p class="text-gray-500">Supervisor Attendance Rows</p>
+<h2 class="text-4xl font-bold text-[#880E4F] mt-2">
+<?= $supervisor_attendance_count ?>
 </h2>
 </div>
 
